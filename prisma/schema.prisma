@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agendamentos Agendamento[]
+  retiradas    Retirada[]
+  feedbacks    Feedback[]
+}
+
+model Equipamento {
+  id          String   @id @default(cuid())
+  nome        String
+  descricao   String?
+  tipo        String
+  status      String   @default("disponivel")
+  localizacao String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  agendamentos Agendamento[]
+  retiradas    Retirada[]
+}
+
+model Agendamento {
+  id            String   @id @default(cuid())
+  userId        String
+  equipamentoId String
+  dataInicio    DateTime
+  dataFim       DateTime
+  status        String   @default("pendente")
+  observacoes   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id])
+  equipamento Equipamento @relation(fields: [equipamentoId], references: [id])
+
+  @@index([userId])
+  @@index([equipamentoId])
+}
+
+model Retirada {
+  id            String    @id @default(cuid())
+  userId        String
+  equipamentoId String
+  dataRetirada  DateTime
+  dataDevolucao DateTime?
+  status        String    @default("ativa")
+  observacoes   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id])
+  equipamento Equipamento @relation(fields: [equipamentoId], references: [id])
+
+  @@index([userId])
+  @@index([equipamentoId])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  tipo      String
+  mensagem  String
+  status    String   @default("novo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
