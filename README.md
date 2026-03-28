@@ -151,19 +151,6 @@ Leia nosso [Guia de Contribuição](CONTRIBUTING.md) para detalhes sobre:
 - Código de conduta
 - Guia de estilo
 
-## 🐛 Reportar Bugs
-
-Encontrou um bug? Abra uma [issue](../../issues) com:
-- Descrição clara do problema
-- Passos para reproduzir
-- Comportamento esperado vs atual
-- Screenshots (se aplicável)
-- Ambiente (SO, versão do Node, etc.)
-
-## 📝 Roadmap
-
-Veja nosso [projeto no GitHub](../../projects) para acompanhar o desenvolvimento de novas funcionalidades.
-
 ## 👥 Autores
 
 - **Equipe de Desenvolvimento** - *Trabalho inicial*
