@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth, type Role } from "@/lib/auth-context";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Painel", path: "/dashboard" },
@@ -29,9 +30,21 @@ const menuItems = [
   { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
 ];
 
+const roleRouteAccess: Record<Role, string[]> = {
+  ADMIN: ['/dashboard', '/equipamentos', '/agendamento', '/retiradas', '/historico', '/relatorios', '/usuarios', '/feedback'],
+  PROFESSOR: ['/dashboard', '/equipamentos', '/agendamento', '/historico', '/feedback'],
+  TECNICO: ['/dashboard', '/equipamentos', '/agendamento', '/retiradas', '/historico', '/feedback'],
+};
+
 export function AppSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { user, logout } = useAuth();
+
+  const allowedRoutes = user ? roleRouteAccess[user.role] : [];
+  const visibleItems = menuItems.filter((item) =>
+    allowedRoutes.some((route) => item.path.startsWith(route))
+  );
 
   return (
     <aside
@@ -47,7 +60,7 @@ export function AppSidebar() {
         {!collapsed && (
           <div className="flex flex-col">
             <span className="text-sm font-bold text-sidebar-foreground">
-              GestãoTec
+              Equipa
             </span>
             <span className="text-[11px] text-sidebar-foreground/60">
               Escola Municipal
@@ -64,7 +77,7 @@ export function AppSidebar() {
       </button>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {menuItems.map((item) => {
+        {visibleItems.map((item) => {
           const isActive = pathname === item.path;
           return (
             <Link
@@ -85,7 +98,16 @@ export function AppSidebar() {
       </nav>
 
       <div className="border-t border-sidebar-border px-3 py-4">
-        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors">
+        {user && !collapsed && (
+          <div className="px-3 pb-3">
+            <p className="text-xs font-medium text-sidebar-foreground/90 truncate">{user.name || user.email}</p>
+            <p className="text-[11px] text-sidebar-foreground/50 truncate">{user.email}</p>
+          </div>
+        )}
+        <button
+          onClick={logout}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
+        >
           <LogOut className="h-[18px] w-[18px] shrink-0" />
           {!collapsed && <span>Sair</span>}
         </button>
