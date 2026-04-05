@@ -18,7 +18,7 @@ async function main() {
   for (const user of users) {
     await prisma.user.upsert({
       where: { email: user.email },
-      update: { name: user.name, role: user.role, status: user.status, mustChangePassword: true },
+      update: { name: user.name, role: user.role, status: user.status, password: defaultPassword, mustChangePassword: true },
       create: { ...user, password: defaultPassword, mustChangePassword: true },
     });
     console.log(`✅ ${user.name} (${user.email}) — ${user.role}`);

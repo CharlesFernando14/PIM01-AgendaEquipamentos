@@ -7,7 +7,7 @@ const DEFAULT_PASSWORD = '123456';
 
 export async function GET() {
   const session = await getSessionUser();
-  if (!session || session.role !== 'ADMIN') {
+  if (!session || session.role === 'PROFESSOR') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
   }
 
