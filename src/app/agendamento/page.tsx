@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Plus, Clock } from "lucide-react";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -59,7 +60,7 @@ export default function Agendamento() {
         r.endTime > form.startTime
     );
     if (conflict) {
-      alert("Conflito de horário! Este equipamento já está reservado neste período.");
+      toast.error("Conflito de horário! Este equipamento já está reservado neste período.");
       return;
     }
     setReservations([
