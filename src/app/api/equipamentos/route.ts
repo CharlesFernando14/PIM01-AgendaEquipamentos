@@ -21,6 +21,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
+  if (session.role === 'PROFESSOR') {
+    return NextResponse.json({ error: 'Sem permissão para cadastrar equipamentos.' }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
     const { nome, tipo, localizacao, quantidade, descricao } = body;

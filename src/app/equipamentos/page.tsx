@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Search, Monitor, Tablet, Speaker, Laptop, Edit2, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth-context";
 
 interface Equipamento {
   id: string;
@@ -48,6 +49,8 @@ export default function Equipamentos() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const { user } = useAuth();
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'TECNICO';
 
   const fetchEquipamentos = useCallback(async () => {
     try {
@@ -153,7 +156,7 @@ export default function Equipamentos() {
       title="Equipamentos"
       subtitle="Gerencie os equipamentos tecnologicos da escola"
       actions={
-        <Button onClick={handleOpenNew}><Plus className="mr-2 h-4 w-4" /> Novo Equipamento</Button>
+        canEdit ? <Button onClick={handleOpenNew}><Plus className="mr-2 h-4 w-4" /> Novo Equipamento</Button> : undefined
       }
     >
       <div className="mb-6">
@@ -191,14 +194,16 @@ export default function Equipamentos() {
                     </div>
                     <Badge variant={st.variant}>{st.label}</Badge>
                   </div>
-                  <div className="mt-4 flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleOpenEdit(eq)}>
-                      <Edit2 className="mr-1.5 h-3 w-3" /> Editar
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(eq.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
+                  {canEdit && (
+                    <div className="mt-4 flex gap-2">
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleOpenEdit(eq)}>
+                        <Edit2 className="mr-1.5 h-3 w-3" /> Editar
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDelete(eq.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );

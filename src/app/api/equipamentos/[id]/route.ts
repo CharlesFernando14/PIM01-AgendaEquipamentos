@@ -8,6 +8,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
+  if (session.role === 'PROFESSOR') {
+    return NextResponse.json({ error: 'Sem permissão para editar equipamentos.' }, { status: 403 });
+  }
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -39,6 +43,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const session = await getSessionUser();
   if (!session) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  }
+
+  if (session.role === 'PROFESSOR') {
+    return NextResponse.json({ error: 'Sem permissão para excluir equipamentos.' }, { status: 403 });
   }
 
   try {
