@@ -10,6 +10,7 @@ export interface AuthUser {
   email: string;
   name: string | null;
   role: Role;
+  mustChangePassword?: boolean;
 }
 
 interface AuthContextType {
@@ -53,9 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchUser();
   }, [fetchUser]);
 
-  // Redirect authenticated users away from /login
+  // Redirect authenticated users away from /login (but not if they need to change password)
   useEffect(() => {
-    if (!loading && user && pathname === '/login') {
+    if (!loading && user && pathname === '/login' && !user.mustChangePassword) {
       const roleDefaultRoute: Record<Role, string> = {
         ADMIN: '/dashboard',
         PROFESSOR: '/agendamento',

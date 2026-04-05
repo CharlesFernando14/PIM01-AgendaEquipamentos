@@ -8,5 +8,13 @@ export async function GET() {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
-  return NextResponse.json({ user });
+  return NextResponse.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword ?? false,
+    },
+  });
 }

@@ -1,32 +1,35 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { Plus, Loader2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
-type Perfil = "admin" | "professor" | "tecnico";
+type Role = "ADMIN" | "PROFESSOR" | "TECNICO";
 type Status = "ativo" | "inativo";
 
 interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
-  perfil: Perfil;
+  role: Role;
   status: Status;
+  mustChangePassword: boolean;
 }
 
-const perfilConfig: Record<Perfil, { label: string; className: string }> = {
-  admin: { label: "Admin", className: "bg-blue-600 text-white hover:bg-blue-600" },
-  professor: { label: "Professor", className: "bg-blue-100 text-blue-800 hover:bg-blue-100" },
-  tecnico: { label: "Técnico", className: "bg-gray-200 text-gray-700 hover:bg-gray-200" },
+const perfilConfig: Record<Role, { label: string; className: string }> = {
+  ADMIN: { label: "Admin", className: "bg-blue-600 text-white hover:bg-blue-600" },
+  PROFESSOR: { label: "Professor", className: "bg-blue-100 text-blue-800 hover:bg-blue-100" },
+  TECNICO: { label: "Técnico", className: "bg-gray-200 text-gray-700 hover:bg-gray-200" },
 };
 
 const statusConfig: Record<Status, { label: string; className: string }> = {
@@ -34,47 +37,86 @@ const statusConfig: Record<Status, { label: string; className: string }> = {
   inativo: { label: "Inativo", className: "bg-red-100 text-red-700 border-red-200 hover:bg-red-100" },
 };
 
-const initialUsers: User[] = [
-  { id: 1, name: "Admin Escola", email: "admin@escola.edu.br", perfil: "admin", status: "ativo" },
-  { id: 2, name: "Maria Silva", email: "maria@escola.edu.br", perfil: "professor", status: "ativo" },
-  { id: 3, name: "João Santos", email: "joao@escola.edu.br", perfil: "professor", status: "ativo" },
-  { id: 4, name: "Ana Costa", email: "ana@escola.edu.br", perfil: "professor", status: "ativo" },
-  { id: 5, name: "Carlos Lima", email: "carlos@escola.edu.br", perfil: "professor", status: "inativo" },
-  { id: 6, name: "Tech Support", email: "tech@escola.edu.br", perfil: "tecnico", status: "ativo" },
-];
-
-const emptyForm = { name: "", email: "", perfil: "professor" as Perfil, status: "ativo" as Status };
+const emptyForm = { name: "", email: "", role: "PROFESSOR" as Role, status: "ativo" as Status };
 
 export default function Usuarios() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users);
+      }
+    } catch {
+      toast.error("Erro ao carregar usuários.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   const handleOpenNew = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setError("");
     setDialogOpen(true);
   };
 
   const handleOpenEdit = (user: User) => {
     setEditingId(user.id);
-    setForm({ name: user.name, email: user.email, perfil: user.perfil, status: user.status });
+    setForm({ name: user.name || "", email: user.email, role: user.role, status: user.status as Status });
+    setError("");
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || !form.email) return;
+    setSaving(true);
+    setError("");
 
-    if (editingId !== null) {
-      setUsers(users.map((u) => (u.id === editingId ? { ...u, ...form } : u)));
-    } else {
-      setUsers([...users, { ...form, id: Date.now() }]);
+    try {
+      const isEditing = editingId !== null;
+      const url = isEditing ? `/api/users/${editingId}` : '/api/users';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Erro ao salvar.");
+        return;
+      }
+
+      if (isEditing) {
+        setUsers(users.map((u) => (u.id === editingId ? data.user : u)));
+        toast.success("Usuário atualizado.");
+      } else {
+        setUsers([...users, data.user]);
+        toast.success("Usuário criado com senha padrão: 123456");
+      }
+
+      setForm(emptyForm);
+      setEditingId(null);
+      setDialogOpen(false);
+    } catch {
+      setError("Erro ao salvar usuário.");
+    } finally {
+      setSaving(false);
     }
-
-    setForm(emptyForm);
-    setEditingId(null);
-    setDialogOpen(false);
   };
 
   return (
@@ -92,6 +134,11 @@ export default function Usuarios() {
           <CardTitle className="text-lg">Usuários Cadastrados</CardTitle>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -108,13 +155,13 @@ export default function Usuarios() {
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell className="text-muted-foreground">{user.email}</TableCell>
                   <TableCell>
-                    <Badge className={perfilConfig[user.perfil].className}>
-                      {perfilConfig[user.perfil].label}
+                    <Badge className={perfilConfig[user.role].className}>
+                      {perfilConfig[user.role].label}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={statusConfig[user.status].className}>
-                      {statusConfig[user.status].label}
+                    <Badge variant="outline" className={statusConfig[user.status as Status].className}>
+                      {statusConfig[user.status as Status].label}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -129,6 +176,7 @@ export default function Usuarios() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -138,6 +186,19 @@ export default function Usuarios() {
             <DialogTitle>{editingId ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {!editingId && (
+              <Alert>
+                <AlertDescription>
+                  O usuário será criado com a senha padrão <strong>123456</strong> e deverá alterá-la no primeiro login.
+                </AlertDescription>
+              </Alert>
+            )}
             <div>
               <Label>Nome</Label>
               <Input
@@ -157,14 +218,14 @@ export default function Usuarios() {
             </div>
             <div>
               <Label>Perfil</Label>
-              <Select value={form.perfil} onValueChange={(v) => setForm({ ...form, perfil: v as Perfil })}>
+              <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as Role })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o perfil" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="professor">Professor</SelectItem>
-                  <SelectItem value="tecnico">Técnico</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="PROFESSOR">Professor</SelectItem>
+                  <SelectItem value="TECNICO">Técnico</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -181,10 +242,11 @@ export default function Usuarios() {
               </Select>
             </div>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
                 Cancelar
               </Button>
-              <Button onClick={handleSave}>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {editingId ? "Salvar" : "Cadastrar"}
               </Button>
             </div>

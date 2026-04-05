@@ -8,6 +8,7 @@ export interface AuthUser {
   email: string;
   name: string | null;
   role: Role;
+  mustChangePassword?: boolean;
 }
 
 const SECRET = new TextEncoder().encode(
@@ -23,6 +24,7 @@ export async function createSession(user: AuthUser): Promise<string> {
     email: user.email,
     name: user.name,
     role: user.role,
+    mustChangePassword: user.mustChangePassword ?? false,
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime(`${SESSION_DURATION}s`)
@@ -40,6 +42,7 @@ export async function verifySession(token: string): Promise<AuthUser | null> {
       email: payload.email as string,
       name: (payload.name as string) || null,
       role: payload.role as Role,
+      mustChangePassword: payload.mustChangePassword as boolean ?? false,
     };
   } catch {
     return null;

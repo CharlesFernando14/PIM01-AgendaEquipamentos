@@ -9,6 +9,9 @@ const SECRET = new TextEncoder().encode(
 
 const publicPaths = ['/login', '/api/auth/login', '/api/auth/logout'];
 
+// Paths that require authentication but bypass role checks
+const authOnlyPaths = ['/change-password', '/api/auth/change-password'];
+
 const roleRouteAccess: Record<string, string[]> = {
   ADMIN: ['/dashboard', '/equipamentos', '/agendamento', '/retiradas', '/historico', '/relatorios', '/usuarios', '/feedback'],
   PROFESSOR: ['/dashboard', '/equipamentos', '/agendamento', '/historico', '/feedback'],
@@ -28,7 +31,7 @@ export async function middleware(request: NextRequest) {
   if (
     publicPaths.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/') ||
     pathname.includes('.')
   ) {
     return NextResponse.next();
@@ -49,10 +52,21 @@ export async function middleware(request: NextRequest) {
   try {
     const { payload } = await jwtVerify(token, SECRET);
     const role = payload.role as string;
+    const mustChangePassword = payload.mustChangePassword as boolean;
+
+    // Force password change — redirect to /change-password if not already there
+    if (mustChangePassword && !authOnlyPaths.some((p) => pathname.startsWith(p))) {
+      return NextResponse.redirect(new URL('/change-password', request.url));
+    }
 
     // Root path — redirect to role default
     if (pathname === '/') {
       return NextResponse.redirect(new URL(roleDefaultRoute[role] || '/dashboard', request.url));
+    }
+
+    // Auth-only paths (change-password) — allow any authenticated user
+    if (authOnlyPaths.some((p) => pathname.startsWith(p))) {
+      return NextResponse.next();
     }
 
     // Check route access for the user's role

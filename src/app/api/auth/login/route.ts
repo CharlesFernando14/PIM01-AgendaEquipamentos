@@ -47,14 +47,17 @@ export async function POST(request: Request) {
       email: user.email,
       name: user.name,
       role,
+      mustChangePassword: user.mustChangePassword,
     };
 
     const token = await createSession(authUser);
     const cookieConfig = getSessionCookieConfig(token);
 
+    const redirectTo = user.mustChangePassword ? '/change-password' : roleDefaultRoute[role];
+
     const response = NextResponse.json({
       user: authUser,
-      redirectTo: roleDefaultRoute[role],
+      redirectTo,
     });
 
     response.cookies.set(cookieConfig);
