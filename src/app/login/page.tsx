@@ -1,22 +1,69 @@
 'use client';
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Monitor } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Monitor, AlertCircle, Eye, EyeOff, Loader2, Info } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 export default function Login() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { login } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
-  const handleLogin = (e: React.FormEvent) => {
+  const sessionExpired = searchParams.get("expired") === "1";
+  const loggedOut = searchParams.get("logout") === "1";
+
+  const validate = (): boolean => {
+    const errors: { email?: string; password?: string } = {};
+
+    if (!email.trim()) {
+      errors.email = "Informe seu e-mail.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      errors.email = "Informe um e-mail válido.";
+    }
+
+    if (!password) {
+      errors.password = "Informe sua senha.";
+    } else if (password.length < 6) {
+      errors.password = "A senha deve ter pelo menos 6 caracteres.";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: integrate with auth
-    router.push("/dashboard");
+    setError("");
+
+    if (!validate()) return;
+
+    setLoading(true);
+    try {
+      const result = await login(email.trim().toLowerCase(), password);
+
+      if (result.success && result.redirectTo) {
+        router.replace(result.redirectTo);
+      } else if (result.error) {
+        setError(result.error);
+      }
+    } catch {
+      setError("Não foi possível conectar ao servidor. Tente novamente em instantes.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -27,21 +74,91 @@ export default function Login() {
             <Monitor className="h-6 w-6 text-primary-foreground" />
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold text-foreground">GestãoTec</h1>
+            <h1 className="text-xl font-bold text-foreground">Equipa</h1>
             <p className="text-sm text-muted-foreground">Sistema de Equipamentos Escolares</p>
           </div>
         </CardHeader>
         <CardContent className="p-6 pt-4">
-          <form onSubmit={handleLogin} className="space-y-4">
+          {sessionExpired && (
+            <Alert className="mb-4">
+              <Info className="h-4 w-4" />
+              <AlertDescription>Sua sessão expirou. Faça login novamente.</AlertDescription>
+            </Alert>
+          )}
+
+          {loggedOut && (
+            <Alert className="mb-4">
+              <Info className="h-4 w-4" />
+              <AlertDescription>Você saiu do sistema.</AlertDescription>
+            </Alert>
+          )}
+
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4" noValidate>
             <div>
-              <Label>E-mail</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.edu.br" required />
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                }}
+                placeholder="seu@email.edu.br"
+                autoComplete="email"
+                autoFocus
+                disabled={loading}
+              />
+              {fieldErrors.email && (
+                <p className="text-sm text-destructive mt-1">{fieldErrors.email}</p>
+              )}
             </div>
             <div>
-              <Label>Senha</Label>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+              <Label htmlFor="password">Senha</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                  }}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  disabled={loading}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {fieldErrors.password && (
+                <p className="text-sm text-destructive mt-1">{fieldErrors.password}</p>
+              )}
             </div>
-            <Button type="submit" className="w-full">Entrar</Button>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                "Entrar"
+              )}
+            </Button>
             <p className="text-center text-xs text-muted-foreground">
               Esqueceu a senha? Contate o administrador.
             </p>
