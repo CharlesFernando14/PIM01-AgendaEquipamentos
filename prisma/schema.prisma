@@ -39,6 +39,7 @@ model Equipamento {
   tipo        String
   status      String   @default("disponivel")
   localizacao String?
+  quantidade  Int      @default(1)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
