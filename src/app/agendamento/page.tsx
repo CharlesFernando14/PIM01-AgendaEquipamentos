@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Plus, Clock, Loader2, AlertCircle, X, CalendarIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Clock, Loader2, AlertCircle, X, CalendarIcon, ChevronUp, ChevronDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
@@ -46,6 +47,101 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   cancelado: { label: "Cancelado", variant: "destructive" },
 };
 
+function TimeField({ value, max, onCommit }: { value: number; max: number; onCommit: (n: number) => void }) {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const [text, setText] = useState(pad(value));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setText(pad(value));
+  }, [value, focused]);
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      maxLength={2}
+      className="flex h-10 w-14 items-center justify-center rounded-md border bg-background text-center text-sm font-medium tabular-nums outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+      value={text}
+      onChange={(e) => {
+        const raw = e.target.value.replace(/\D/g, '').slice(0, 2);
+        setText(raw);
+      }}
+      onFocus={(e) => {
+        setFocused(true);
+        e.target.select();
+      }}
+      onBlur={() => {
+        setFocused(false);
+        const n = text === '' ? 0 : Math.min(max, Math.max(0, parseInt(text, 10)));
+        onCommit(n);
+        setText(pad(n));
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+    />
+  );
+}
+
+function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [hour, minute] = value.split(':').map(Number);
+
+  const pad = (n: number) => n.toString().padStart(2, '0');
+
+  const setHour = (h: number) => {
+    const clamped = ((h % 24) + 24) % 24;
+    onChange(`${pad(clamped)}:${pad(minute)}`);
+  };
+
+  const setMinute = (m: number) => {
+    const clamped = ((m % 60) + 60) % 60;
+    onChange(`${pad(hour)}:${pad(clamped)}`);
+  };
+
+  return (
+    <div className="flex items-center gap-1 mt-1">
+      <div className="flex flex-col items-center">
+        <button
+          type="button"
+          className="p-1 rounded hover:bg-muted transition-colors"
+          onClick={() => setHour(hour + 1)}
+        >
+          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <TimeField value={hour} max={23} onCommit={setHour} />
+        <button
+          type="button"
+          className="p-1 rounded hover:bg-muted transition-colors"
+          onClick={() => setHour(hour - 1)}
+        >
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </div>
+      <span className="text-lg font-semibold text-muted-foreground pb-0.5">:</span>
+      <div className="flex flex-col items-center">
+        <button
+          type="button"
+          className="p-1 rounded hover:bg-muted transition-colors"
+          onClick={() => setMinute(minute + 15)}
+        >
+          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <TimeField value={minute} max={59} onCommit={setMinute} />
+        <button
+          type="button"
+          className="p-1 rounded hover:bg-muted transition-colors"
+          onClick={() => setMinute(minute - 15)}
+        >
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Agendamento() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -57,7 +153,7 @@ export default function Agendamento() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ equipamentoId: "", startTime: "", endTime: "", observacoes: "", userId: "" });
+  const [form, setForm] = useState({ equipamentoId: "", startTime: "08:00", endTime: "09:00", observacoes: "", userId: "", allDay: false });
   const [formDate, setFormDate] = useState<Date>(new Date());
 
   const canManage = user?.role === 'ADMIN' || user?.role === 'TECNICO';
@@ -123,20 +219,24 @@ export default function Agendamento() {
     .map((a) => new Date(a.dataInicio));
 
   const handleOpenNew = () => {
-    setForm({ equipamentoId: "", startTime: "", endTime: "", observacoes: "", userId: "" });
+    setForm({ equipamentoId: "", startTime: "08:00", endTime: "09:00", observacoes: "", userId: "", allDay: false });
     setFormDate(selectedDate);
     setError("");
     setDialogOpen(true);
   };
 
   const handleAdd = async () => {
-    if (!form.equipamentoId || !form.startTime || !form.endTime) return;
+    if (!form.equipamentoId || (!form.allDay && (!form.startTime || !form.endTime))) return;
     setSaving(true);
     setError("");
 
     const dateStr = format(formDate, 'yyyy-MM-dd');
-    const dataInicio = new Date(`${dateStr}T${form.startTime}:00`);
-    const dataFim = new Date(`${dateStr}T${form.endTime}:00`);
+    const dataInicio = form.allDay
+      ? new Date(`${dateStr}T00:00:00`)
+      : new Date(`${dateStr}T${form.startTime}:00`);
+    const dataFim = form.allDay
+      ? new Date(`${dateStr}T23:59:00`)
+      : new Date(`${dateStr}T${form.endTime}:00`);
 
     try {
       const res = await fetch('/api/agendamentos', {
@@ -255,7 +355,7 @@ export default function Agendamento() {
                   const fim = new Date(a.dataFim);
                   const isOwner = a.user.id === user?.id;
                   return (
-                    <div key={a.id} className="flex items-center justify-between rounded-lg border p-4">
+                    <div key={a.id} className={`flex items-center justify-between rounded-lg border p-4 ${isOwner ? 'border-primary/40 bg-primary/5' : ''}`}>
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1 text-sm font-medium text-primary">
                           <Clock className="h-4 w-4" />
@@ -276,7 +376,7 @@ export default function Agendamento() {
                             Confirmar
                           </Button>
                         )}
-                        {a.status !== 'cancelado' && (isOwner || canManage) && (
+                        {a.status !== 'cancelado' && a.status !== 'confirmado' && (isOwner || canManage) && (
                           <Button variant="ghost" size="sm" onClick={() => handleCancel(a.id)}>
                             <X className="h-4 w-4" />
                           </Button>
@@ -346,16 +446,32 @@ export default function Agendamento() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Inicio</Label>
-                <Input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
-              </div>
-              <div>
-                <Label>Termino</Label>
-                <Input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} />
-              </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="allDay"
+                checked={form.allDay}
+                onCheckedChange={(checked) => setForm({ ...form, allDay: !!checked })}
+              />
+              <Label htmlFor="allDay" className="text-sm font-normal cursor-pointer">Dia inteiro</Label>
             </div>
+            {!form.allDay && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Início</Label>
+                  <TimePicker
+                    value={form.startTime}
+                    onChange={(v) => setForm({ ...form, startTime: v })}
+                  />
+                </div>
+                <div>
+                  <Label>Término</Label>
+                  <TimePicker
+                    value={form.endTime}
+                    onChange={(v) => setForm({ ...form, endTime: v })}
+                  />
+                </div>
+              </div>
+            )}
             <div>
               <Label>Observacoes</Label>
               <Input value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Ex: Aula de Ciencias" />

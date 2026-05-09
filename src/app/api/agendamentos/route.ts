@@ -55,16 +55,27 @@ export async function POST(request: Request) {
 
     const inicio = new Date(dataInicio);
     const fim = new Date(dataFim);
-
+feat/q
     if (fim <= inicio) {
       return NextResponse.json({ error: 'O horário de término deve ser após o de início.' }, { status: 400 });
     }
 
-    // Check for conflicts
+    // Check for conflicts — ignorar agendamentos confirmados cuja retirada já foi devolvida
+    const retiradасDevolvidas = await prisma.retirada.findMany({
+      where: { equipamentoId, status: 'DEVOLVIDO' },
+      select: { id: true },
+    });
+    const idsDevolvidos = retiradасDevolvidas.map(r => r.id);
+    // Os ids das retiradas geradas automaticamente seguem o padrão "ag-{agendamentoId}"
+    const agIdsDevolvidos = idsDevolvidos
+      .filter(id => id.startsWith('ag-'))
+      .map(id => id.replace(/^ag-/, ''));
+
     const conflict = await prisma.agendamento.findFirst({
       where: {
         equipamentoId,
         status: { not: 'cancelado' },
+        id: agIdsDevolvidos.length > 0 ? { notIn: agIdsDevolvidos } : undefined,
         dataInicio: { lt: fim },
         dataFim: { gt: inicio },
       },

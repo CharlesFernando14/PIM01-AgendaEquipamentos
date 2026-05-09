@@ -43,7 +43,7 @@ const menuItems = [
 
 const roleRouteAccess: Record<Role, string[]> = {
   ADMIN: ['/dashboard', '/equipamentos', '/agendamento', '/retiradas', '/historico', '/relatorios', '/usuarios', '/feedback'],
-  PROFESSOR: ['/dashboard', '/equipamentos', '/agendamento', '/historico', '/feedback'],
+  PROFESSOR: ['/dashboard', '/equipamentos', '/agendamento', '/retiradas', '/historico', '/feedback'],
   TECNICO: ['/dashboard', '/equipamentos', '/agendamento', '/retiradas', '/historico', '/feedback'],
 };
 
