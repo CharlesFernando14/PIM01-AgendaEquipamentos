@@ -7,6 +7,71 @@
 [![Prisma](https://img.shields.io/badge/Prisma-6.0-2D3748)](https://www.prisma.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
+---
+
+## Funcionalidades implementadas
+
+### 🔐 Autenticação e Segurança
+- Login com e-mail e senha (JWT em cookie httpOnly)
+- Troca de senha obrigatória no primeiro acesso
+- Troca de senha voluntária pelo menu lateral
+- Proteção de rotas por perfil via middleware
+- Redirecionamento automático por perfil após login
+
+### 📊 Dashboard
+- Cards de resumo: agendamentos do dia, retiradas ativas, equipamentos disponíveis e feedbacks pendentes
+- Visão geral das movimentações recentes
+
+### 🖥️ Equipamentos
+- Cadastro com nome, tipo, localização, quantidade, status e descrição
+- Tipos predefinidos + criação de tipos personalizados ("Outro")
+- Tipos customizados ficam disponíveis como opção nas próximas criações
+- Lista ordenada alfabeticamente no select de tipo
+- Busca por nome ou localização
+- Filtro por sala (derivado das localizações cadastradas)
+- Filtro por disponibilidade (Disponível / Em uso / Manutenção)
+- Ordenação por nome A→Z ou Z→A
+- Edição e exclusão (somente Admin e Técnico)
+
+### 📅 Agendamento
+- Reserva de equipamentos por período (data/hora início e fim)
+- Validação de conflito de horários
+- Admin/Técnico pode confirmar ou cancelar agendamentos
+- Professor pode cancelar seus próprios agendamentos
+- Visualização por dia com navegação de datas
+
+### 📦 Retiradas
+- Fluxo Kanban: Aguardando Retirada → Em Uso → Devolvido
+- Geração automática de retirada ao confirmar um agendamento
+- Registro de data/hora de retirada e devolução
+
+### 📋 Histórico
+- Tabela unificada de agendamentos e retiradas
+- Busca por equipamento, professor ou finalidade
+- Badges coloridos por status
+
+### 📈 Relatórios _(Admin e Técnico)_
+- Filtros combinados: tipo (agendamento/retirada), professor, equipamento, intervalo de datas
+- Calendário de seleção de datas em português (dd/mm/aaaa)
+- Cards de totais: registros, agendamentos, retiradas, professores ativos
+- Resumo de status em badges por categoria
+- Aba **Agendamentos** — tabela completa com todos os campos
+- Aba **Retiradas** — tabela com data de retirada e devolução
+- Aba **Por Professor** — ranking com barra proporcional + tabela com contagem separada
+- Aba **Por Equipamento** — mesmo formato do ranking por professor
+- Exportação em CSV (UTF-8 com BOM) em cada aba
+
+### 👥 Usuários _(Admin)_
+- Listagem, criação, edição e desativação de usuários
+- Perfis: Admin, Professor, Técnico
+- Redefinição de senha pelo administrador
+
+### 💬 Feedback
+- Envio de feedbacks categorizados (sugestão, problema, elogio etc.)
+- Listagem e mudança de status (Admin/Técnico)
+
+---
+
 ## Stack
 
 - **Next.js 15** — Framework React com TypeScript
@@ -14,7 +79,7 @@
 - **Prisma ORM** — Modelagem e acesso ao banco
 - **Tailwind CSS** — Estilização
 - **Shadcn/ui** — Componentes UI
-- **React Query** — Estado server-side
+- **date-fns** — Formatação e localização de datas (pt-BR)
 
 ---
 
@@ -166,27 +231,62 @@ npm run db:seed      # Popular banco com dados iniciais
 
 ```
 ├── prisma/
-│   ├── schema.prisma         # Schema do banco de dados
-│   └── seed.ts               # Script de seed (usuários iniciais)
+│   ├── schema.prisma                   # Schema do banco de dados (User, Equipamento, Agendamento, Retirada, Feedback)
+│   └── seed.ts                         # Script de seed (usuários iniciais)
+├── scripts/
+│   └── ensure-db.js                    # Garante que o banco existe antes de rodar
 ├── src/
+│   ├── middleware.ts                    # Proteção de rotas e controle de acesso por perfil
 │   ├── app/
-│   │   ├── api/auth/         # Rotas de autenticação (login, logout, me)
-│   │   ├── login/            # Tela de login
-│   │   ├── dashboard/        # Painel de controle
-│   │   ├── equipamentos/     # Gestão de equipamentos
-│   │   ├── agendamento/      # Sistema de reservas
-│   │   ├── retiradas/        # Controle de retiradas
-│   │   ├── historico/        # Histórico de operações
-│   │   ├── usuarios/         # Gestão de usuários
-│   │   ├── feedback/         # Feedbacks
-│   │   └── relatorios/       # Relatórios
-│   ├── components/           # Componentes reutilizáveis (sidebar, layout, UI)
-│   ├── lib/
-│   │   ├── auth.ts           # Utilitários JWT e permissões
-│   │   ├── auth-context.tsx  # Contexto React de autenticação
-│   │   ├── prisma.ts         # Cliente Prisma
-│   │   └── utils.ts          # Utilitários gerais
-│   └── middleware.ts         # Proteção de rotas e autorização
+│   │   ├── layout.tsx                  # Layout raiz (fontes, providers, toaster)
+│   │   ├── page.tsx                    # Redireciona para /login ou /dashboard
+│   │   ├── globals.css
+│   │   ├── login/                      # Tela de login
+│   │   ├── change-password/            # Troca de senha obrigatória
+│   │   ├── dashboard/                  # Painel com estatísticas
+│   │   ├── equipamentos/               # CRUD de equipamentos com filtros e ordenação
+│   │   ├── agendamento/                # Reservas de equipamentos por dia
+│   │   ├── retiradas/                  # Fluxo Kanban de retiradas
+│   │   ├── historico/                  # Histórico unificado de movimentações
+│   │   ├── relatorios/                 # Relatórios com filtros, rankings e exportação CSV
+│   │   ├── usuarios/                   # Gestão de usuários (Admin)
+│   │   ├── feedback/                   # Envio e gestão de feedbacks
+│   │   └── api/
+│   │       ├── auth/
+│   │       │   ├── login/              # POST — autenticação e geração de JWT
+│   │       │   ├── logout/             # POST — limpa o cookie de sessão
+│   │       │   ├── me/                 # GET — retorna usuário autenticado
+│   │       │   └── change-password/    # POST — troca de senha
+│   │       ├── equipamentos/
+│   │       │   ├── route.ts            # GET (listagem) · POST (criação)
+│   │       │   └── [id]/route.ts       # PUT (edição) · DELETE (exclusão)
+│   │       ├── agendamentos/
+│   │       │   ├── route.ts            # GET (listagem por data) · POST (criação com validação de conflito)
+│   │       │   └── [id]/route.ts       # PUT (confirmar/cancelar) · DELETE
+│   │       ├── retiradas/
+│   │       │   ├── route.ts            # GET · POST
+│   │       │   └── [id]/route.ts       # PUT (avançar status) · DELETE
+│   │       ├── historico/              # GET — movimentações unificadas
+│   │       ├── relatorios/             # GET — dados com filtros, stats e rankings
+│   │       ├── dashboard/              # GET — contadores para os cards
+│   │       └── users/
+│   │           ├── route.ts            # GET · POST
+│   │           └── [id]/route.ts       # PUT · DELETE
+│   ├── components/
+│   │   ├── AppLayout.tsx               # Layout principal (header + sidebar + conteúdo)
+│   │   ├── AppSidebar.tsx              # Sidebar com navegação por perfil e troca de senha
+│   │   ├── NavLink.tsx                 # Link de navegação com estado ativo
+│   │   ├── StatCard.tsx                # Card de estatística do dashboard
+│   │   ├── query-provider.tsx          # Provider do React Query
+│   │   └── ui/                         # Componentes Shadcn/ui (Button, Card, Dialog, Table, etc.)
+│   ├── hooks/
+│   │   ├── use-mobile.tsx
+│   │   └── use-toast.ts
+│   └── lib/
+│       ├── auth.ts                     # getSessionUser — leitura e verificação do JWT
+│       ├── auth-context.tsx            # Contexto React com user, logout e refresh
+│       ├── prisma.ts                   # Singleton do Prisma Client
+│       └── utils.ts                    # cn() e utilitários gerais
 ```
 
 ---
@@ -212,12 +312,12 @@ npm run db:seed      # Popular banco com dados iniciais
 - Agendamento com calendário interativo
 - Gestão de usuários (Admin)
 - Interface responsiva
+- Relatórios e métricas
+- Histórico de operações
+- Controle de retiradas e devoluções
+- Sistema de feedback
 
 ### Em desenvolvimento 🚧
-- Controle de retiradas e devoluções
-- Histórico de operações
-- Sistema de feedback
-- Relatórios e métricas
 
 ---
 

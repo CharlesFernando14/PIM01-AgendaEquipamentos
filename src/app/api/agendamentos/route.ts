@@ -55,7 +55,6 @@ export async function POST(request: Request) {
 
     const inicio = new Date(dataInicio);
     const fim = new Date(dataFim);
-feat/q
     if (fim <= inicio) {
       return NextResponse.json({ error: 'O horário de término deve ser após o de início.' }, { status: 400 });
     }
