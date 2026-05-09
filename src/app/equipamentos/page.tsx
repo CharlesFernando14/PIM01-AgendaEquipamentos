@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Search, Monitor, Tablet, Speaker, Laptop, Edit2, Trash2, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Search, Monitor, Tablet, Speaker, Laptop, Edit2, Trash2, Loader2, AlertCircle, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 
@@ -38,6 +38,19 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   manutencao: { label: "Manutencao", variant: "destructive" },
 };
 
+const TIPOS_PREDEFINIDOS = ["projetor", "chromebook", "tablet", "notebook", "som"];
+
+const TIPO_LABELS: Record<string, string> = {
+  projetor: "Projetor",
+  chromebook: "Chromebook",
+  tablet: "Tablet",
+  notebook: "Notebook",
+  som: "Caixa de Som",
+};
+
+function tipoLabel(tipo: string) {
+  return TIPO_LABELS[tipo] || tipo.charAt(0).toUpperCase() + tipo.slice(1);
+}
 const emptyForm = { nome: "", tipo: "", localizacao: "", quantidade: 1, status: "disponivel", descricao: "" };
 
 export default function Equipamentos() {
@@ -49,8 +62,20 @@ export default function Equipamentos() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [tipoCustom, setTipoCustom] = useState("");
+  const [filtroSala, setFiltroSala] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [ordenacao, setOrdenacao] = useState<"nome_asc" | "nome_desc" | "padrao">("padrao");
   const { user } = useAuth();
   const canEdit = user?.role === 'ADMIN' || user?.role === 'TECNICO';
+
+  // Merge predefined + any custom types found in loaded equipamentos
+  const todosOsTipos = [
+    ...TIPOS_PREDEFINIDOS,
+    ...equipamentos
+      .map((e) => e.tipo)
+      .filter((t) => !TIPOS_PREDEFINIDOS.includes(t)),
+  ].filter((v, i, arr) => arr.indexOf(v) === i).sort((a, b) => tipoLabel(a).localeCompare(tipoLabel(b), "pt-BR"));
 
   const fetchEquipamentos = useCallback(async () => {
     try {
@@ -68,35 +93,53 @@ export default function Equipamentos() {
 
   useEffect(() => { fetchEquipamentos(); }, [fetchEquipamentos]);
 
-  const filtered = equipamentos.filter(
-    (e) =>
-      e.nome.toLowerCase().includes(search.toLowerCase()) ||
-      (e.localizacao?.toLowerCase().includes(search.toLowerCase()) ?? false)
-  );
+  // Unique sala options derived from loaded equipment
+  const todasAsSalas = [...new Set(
+    equipamentos.map((e) => e.localizacao).filter(Boolean) as string[]
+  )].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  const filtered = equipamentos
+    .filter((e) => {
+      const matchSearch =
+        e.nome.toLowerCase().includes(search.toLowerCase()) ||
+        (e.localizacao?.toLowerCase().includes(search.toLowerCase()) ?? false);
+      const matchSala = filtroSala ? e.localizacao === filtroSala : true;
+      const matchStatus = filtroStatus !== "todos" ? e.status === filtroStatus : true;
+      return matchSearch && matchSala && matchStatus;
+    })
+    .sort((a, b) => {
+      if (ordenacao === "nome_asc") return a.nome.localeCompare(b.nome, "pt-BR");
+      if (ordenacao === "nome_desc") return b.nome.localeCompare(a.nome, "pt-BR");
+      return 0;
+    });
 
   const handleOpenNew = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setTipoCustom("");
     setError("");
     setDialogOpen(true);
   };
 
   const handleOpenEdit = (eq: Equipamento) => {
     setEditingId(eq.id);
+    const isCustom = !TIPOS_PREDEFINIDOS.includes(eq.tipo);
     setForm({
       nome: eq.nome,
-      tipo: eq.tipo,
+      tipo: isCustom ? "outro" : eq.tipo,
       localizacao: eq.localizacao || "",
       quantidade: eq.quantidade,
       status: eq.status,
       descricao: eq.descricao || "",
     });
+    setTipoCustom(isCustom ? eq.tipo : "");
     setError("");
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.nome || !form.tipo) return;
+    const tipoFinal = form.tipo === "outro" ? tipoCustom.trim() : form.tipo;
+    if (!form.nome || !tipoFinal) return;
     setSaving(true);
     setError("");
 
@@ -108,7 +151,7 @@ export default function Equipamentos() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, tipo: tipoFinal }),
       });
 
       const data = await res.json();
@@ -127,6 +170,7 @@ export default function Equipamentos() {
       }
 
       setForm(emptyForm);
+      setTipoCustom("");
       setEditingId(null);
       setDialogOpen(false);
     } catch {
@@ -159,11 +203,55 @@ export default function Equipamentos() {
         canEdit ? <Button onClick={handleOpenNew}><Plus className="mr-2 h-4 w-4" /> Novo Equipamento</Button> : undefined
       }
     >
-      <div className="mb-6">
-        <div className="relative max-w-sm">
+      <div className="mb-6 flex flex-wrap gap-3 items-end">
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input className="pl-9" placeholder="Buscar equipamento..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
+        <div className="min-w-[150px]">
+          <Select value={filtroSala || "__todas__"} onValueChange={(v) => setFiltroSala(v === "__todas__" ? "" : v)}>
+            <SelectTrigger className="h-10">
+              <SelectValue placeholder="Filtrar por sala" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__todas__">Todas as salas</SelectItem>
+              {todasAsSalas.map((sala) => (
+                <SelectItem key={sala} value={sala}>{sala}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="min-w-[160px]">
+          <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+            <SelectTrigger className="h-10">
+              <SelectValue placeholder="Disponibilidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os status</SelectItem>
+              <SelectItem value="disponivel">Disponível</SelectItem>
+              <SelectItem value="em_uso">Em uso</SelectItem>
+              <SelectItem value="manutencao">Manutenção</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="min-w-[160px]">
+          <Select value={ordenacao} onValueChange={(v) => setOrdenacao(v as typeof ordenacao)}>
+            <SelectTrigger className="h-10">
+              <ArrowUpDown className="mr-2 h-4 w-4 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="padrao">Padrão (cadastro)</SelectItem>
+              <SelectItem value="nome_asc">Nome A → Z</SelectItem>
+              <SelectItem value="nome_desc">Nome Z → A</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {(filtroSala || filtroStatus !== "todos" || ordenacao !== "padrao") && (
+          <Button variant="ghost" size="sm" className="h-10 text-xs" onClick={() => { setFiltroSala(""); setFiltroStatus("todos"); setOrdenacao("padrao"); }}>
+            Limpar filtros
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -229,16 +317,29 @@ export default function Equipamentos() {
             </div>
             <div>
               <Label>Tipo</Label>
-              <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
+              <Select
+                value={form.tipo}
+                onValueChange={(v) => {
+                  setForm({ ...form, tipo: v });
+                  if (v !== "outro") setTipoCustom("");
+                }}
+              >
                 <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="projetor">Projetor</SelectItem>
-                  <SelectItem value="chromebook">Chromebook</SelectItem>
-                  <SelectItem value="tablet">Tablet</SelectItem>
-                  <SelectItem value="notebook">Notebook</SelectItem>
-                  <SelectItem value="som">Caixa de Som</SelectItem>
+                  {todosOsTipos.map((t) => (
+                    <SelectItem key={t} value={t}>{tipoLabel(t)}</SelectItem>
+                  ))}
+                  <SelectItem value="outro">Outro (digitar)...</SelectItem>
                 </SelectContent>
               </Select>
+              {form.tipo === "outro" && (
+                <Input
+                  className="mt-2"
+                  placeholder="Digite o tipo do equipamento"
+                  value={tipoCustom}
+                  onChange={(e) => setTipoCustom(e.target.value)}
+                />
+              )}
             </div>
             <div>
               <Label>Localizacao</Label>
