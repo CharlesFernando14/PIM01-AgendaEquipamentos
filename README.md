@@ -9,69 +9,6 @@
 
 ---
 
-## Funcionalidades implementadas
-
-### 🔐 Autenticação e Segurança
-- Login com e-mail e senha (JWT em cookie httpOnly)
-- Troca de senha obrigatória no primeiro acesso
-- Troca de senha voluntária pelo menu lateral
-- Proteção de rotas por perfil via middleware
-- Redirecionamento automático por perfil após login
-
-### 📊 Dashboard
-- Cards de resumo: agendamentos do dia, retiradas ativas, equipamentos disponíveis e feedbacks pendentes
-- Visão geral das movimentações recentes
-
-### 🖥️ Equipamentos
-- Cadastro com nome, tipo, localização, quantidade, status e descrição
-- Tipos predefinidos + criação de tipos personalizados ("Outro")
-- Tipos customizados ficam disponíveis como opção nas próximas criações
-- Lista ordenada alfabeticamente no select de tipo
-- Busca por nome ou localização
-- Filtro por sala (derivado das localizações cadastradas)
-- Filtro por disponibilidade (Disponível / Em uso / Manutenção)
-- Ordenação por nome A→Z ou Z→A
-- Edição e exclusão (somente Admin e Técnico)
-
-### 📅 Agendamento
-- Reserva de equipamentos por período (data/hora início e fim)
-- Validação de conflito de horários
-- Admin/Técnico pode confirmar ou cancelar agendamentos
-- Professor pode cancelar seus próprios agendamentos
-- Visualização por dia com navegação de datas
-
-### 📦 Retiradas
-- Fluxo Kanban: Aguardando Retirada → Em Uso → Devolvido
-- Geração automática de retirada ao confirmar um agendamento
-- Registro de data/hora de retirada e devolução
-
-### 📋 Histórico
-- Tabela unificada de agendamentos e retiradas
-- Busca por equipamento, professor ou finalidade
-- Badges coloridos por status
-
-### 📈 Relatórios _(Admin e Técnico)_
-- Filtros combinados: tipo (agendamento/retirada), professor, equipamento, intervalo de datas
-- Calendário de seleção de datas em português (dd/mm/aaaa)
-- Cards de totais: registros, agendamentos, retiradas, professores ativos
-- Resumo de status em badges por categoria
-- Aba **Agendamentos** — tabela completa com todos os campos
-- Aba **Retiradas** — tabela com data de retirada e devolução
-- Aba **Por Professor** — ranking com barra proporcional + tabela com contagem separada
-- Aba **Por Equipamento** — mesmo formato do ranking por professor
-- Exportação em CSV (UTF-8 com BOM) em cada aba
-
-### 👥 Usuários _(Admin)_
-- Listagem, criação, edição e desativação de usuários
-- Perfis: Admin, Professor, Técnico
-- Redefinição de senha pelo administrador
-
-### 💬 Feedback
-- Envio de feedbacks categorizados (sugestão, problema, elogio etc.)
-- Listagem e mudança de status (Admin/Técnico)
-
----
-
 ## Stack
 
 - **Next.js 15** — Framework React com TypeScript
@@ -301,21 +238,68 @@ npm run db:seed      # Popular banco com dados iniciais
 
 ---
 
-## Funcionalidades
+## Funcionalidades implementadas
 
-### Implementadas ✅
-- Login com e-mail/senha e validação completa
-- Autenticação JWT com sessão de 8h
-- Controle de acesso por perfil (Admin, Professor, Técnico)
-- Dashboard com estatísticas
-- CRUD de equipamentos com busca e filtros
-- Agendamento com calendário interativo
-- Gestão de usuários (Admin)
-- Interface responsiva
-- Relatórios e métricas
-- Histórico de operações
-- Controle de retiradas e devoluções
-- Sistema de feedback
+### 🔐 Autenticação e Segurança
+- Login com e-mail e senha (JWT em cookie httpOnly)
+- Troca de senha obrigatória no primeiro acesso
+- Troca de senha voluntária pelo menu lateral
+- Proteção de rotas por perfil via middleware
+- Redirecionamento automático por perfil após login
+
+### 📊 Dashboard
+- Cards de resumo: agendamentos do dia, retiradas ativas, equipamentos disponíveis e feedbacks pendentes
+- Visão geral das movimentações recentes
+
+### 🖥️ Equipamentos
+- Cadastro com nome, tipo, localização, quantidade, status e descrição
+- Tipos predefinidos + criação de tipos personalizados ("Outro")
+- Tipos customizados ficam disponíveis como opção nas próximas criações
+- Lista ordenada alfabeticamente no select de tipo
+- Busca por nome ou localização
+- Filtro por sala (derivado das localizações cadastradas)
+- Filtro por disponibilidade (Disponível / Em uso / Manutenção)
+- Ordenação por nome A→Z ou Z→A
+- Edição e exclusão (somente Admin e Técnico)
+
+### 📅 Agendamento
+- Reserva de equipamentos por período (data/hora início e fim)
+- Validação de conflito de horários
+- Admin/Técnico pode confirmar ou cancelar agendamentos
+- Professor pode cancelar seus próprios agendamentos
+- Visualização por dia com navegação de datas
+
+### 📦 Retiradas
+- Fluxo Kanban: Aguardando Retirada → Em Uso → Devolvido
+- Geração automática de retirada ao confirmar um agendamento
+- Registro de data/hora de retirada e devolução
+
+### 📋 Histórico
+- Tabela unificada de agendamentos e retiradas
+- Busca por equipamento, professor ou finalidade
+- Badges coloridos por status
+
+### 📈 Relatórios _(Admin e Técnico)_
+- Filtros combinados: tipo (agendamento/retirada), professor, equipamento, intervalo de datas
+- Calendário de seleção de datas em português (dd/mm/aaaa)
+- Cards de totais: registros, agendamentos, retiradas, professores ativos
+- Resumo de status em badges por categoria
+- Aba **Agendamentos** — tabela completa com todos os campos
+- Aba **Retiradas** — tabela com data de retirada e devolução
+- Aba **Por Professor** — ranking com barra proporcional + tabela com contagem separada
+- Aba **Por Equipamento** — mesmo formato do ranking por professor
+- Exportação em CSV (UTF-8 com BOM) em cada aba
+
+### 👥 Usuários _(Admin)_
+- Listagem, criação, edição e desativação de usuários
+- Perfis: Admin, Professor, Técnico
+- Redefinição de senha pelo administrador
+
+### 💬 Feedback
+- Envio de feedbacks categorizados (sugestão, problema, elogio etc.)
+- Listagem e mudança de status (Admin/Técnico)
+
+---
 
 ### Em desenvolvimento 🚧
 
