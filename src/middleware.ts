@@ -14,7 +14,7 @@ const authOnlyPaths = ['/change-password', '/api/auth/change-password'];
 
 const roleRouteAccess: Record<string, string[]> = {
   ADMIN: ['/dashboard', '/equipamentos', '/agendamento', '/retiradas', '/historico', '/relatorios', '/usuarios', '/feedback'],
-  PROFESSOR: ['/dashboard', '/equipamentos', '/agendamento', '/historico', '/feedback'],
+  PROFESSOR: ['/dashboard', '/equipamentos', '/agendamento', '/retiradas', '/historico', '/feedback'],
   TECNICO: ['/dashboard', '/equipamentos', '/agendamento', '/retiradas', '/historico', '/feedback'],
 };
 

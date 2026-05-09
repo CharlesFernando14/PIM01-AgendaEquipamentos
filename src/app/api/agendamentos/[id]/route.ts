@@ -27,6 +27,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Sem permissão.' }, { status: 403 });
     }
 
+    // Bloquear cancelamento se já existe retirada ativa (EM_USO ou DEVOLVIDO)
+    if (status === 'cancelado') {
+      const retiradaAtiva = await prisma.retirada.findFirst({
+        where: { id: `ag-${id}`, status: { in: ['EM_USO', 'DEVOLVIDO'] } },
+      });
+      if (retiradaAtiva) {
+        return NextResponse.json(
+          { error: 'Não é possível cancelar: o equipamento já foi retirado.' },
+          { status: 409 }
+        );
+      }
+    }
+
     const updated = await prisma.agendamento.update({
       where: { id },
       data: { status },
@@ -35,6 +48,21 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         equipamento: { select: { id: true, nome: true, tipo: true } },
       },
     });
+
+    // Ao confirmar agendamento, criar retirada automaticamente
+    if (status === 'confirmado') {
+      await prisma.retirada.upsert({
+        where: { id: `ag-${id}` },
+        create: {
+          id: `ag-${id}`,
+          userId: agendamento.userId,
+          equipamentoId: agendamento.equipamentoId,
+          dataRetirada: agendamento.dataInicio,
+          status: 'AGUARDANDO_RETIRADA',
+        },
+        update: {},
+      });
+    }
 
     return NextResponse.json({ agendamento: updated });
   } catch {
