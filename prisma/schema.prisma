@@ -45,6 +45,7 @@ model Equipamento {
 
   agendamentos Agendamento[]
   retiradas    Retirada[]
+  feedbacks    Feedback[]
 }
 
 model Agendamento {
@@ -84,15 +85,19 @@ model Retirada {
 }
 
 model Feedback {
-  id        String   @id @default(cuid())
-  userId    String
-  tipo      String
-  mensagem  String
-  status    String   @default("novo")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  userId        String
+  equipamentoId String?
+  rating        Int?
+  tipo          String   @default("geral")
+  mensagem      String
+  status        String   @default("novo")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+  equipamento Equipamento? @relation(fields: [equipamentoId], references: [id])
 
   @@index([userId])
+  @@index([equipamentoId])
 }
